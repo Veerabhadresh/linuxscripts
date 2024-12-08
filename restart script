@@ -1,0 +1,41 @@
+#!/bin/bash
+
+# Check if IM process is running initially
+if pidof IM >/dev/null 2>&1; then
+    echo "IM process is already running. Starting monitoring..."
+else
+    echo "IM process is not running. Starting it..."
+    /start &
+fi
+
+while true; do
+    # Get the value inside parentheses using awk
+    curdepth_value=$(lsmq | grep 'curdepth(0)' | awk -F'[()]' '{print $2}')
+
+    # Check if curdepth_value is greater than 50
+    if [[ $curdepth_value -gt 50 ]]; then
+        echo "Current curdepth(0) value is $curdepth_value, which is greater than 50. Waiting for 1 minute..."
+        sleep 60
+
+        # Check again after 1 minute
+        curdepth_value=$(lsmq | grep 'curdepth(0)' | awk -F'[()]' '{print $2}')
+        if [[ $curdepth_value -gt 50 ]]; then
+            echo "curdepth(0) is still high. Checking IM process status..."
+
+            # Check if IM process is running
+            if pidof IM >/dev/null 2>&1; then
+                echo "IM process is running. Killing it..."
+                kill -9 $(pidof IM)
+                sleep 30
+            else
+                echo "IM process is not running. Starting it..."
+            fi
+
+            # Start the IM process
+            /start &
+        fi
+    fi
+
+    # Sleep for 5 minutes before the next check
+    sleep 300
+done
