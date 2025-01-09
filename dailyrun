@@ -1,0 +1,87 @@
+#!/bin/bash
+
+# Define paths
+PERL_SCRIPT="/path/to/your_script.pl"
+TMP_DIR="/tmp"
+LOG_DIR="$TMP_DIR/logs"  # Directory for storing log files
+mkdir -p "$LOG_DIR"  # Create the log directory if it doesn't exist
+
+# Get the current date and time for the log file timestamp
+CURRENT_DATE=$(date +%Y-%m-%d)
+CURRENT_TIMESTAMP=$(date +%Y-%m-%d_%H-%M-%S)
+LOG_FILE="$LOG_DIR/run_log_$CURRENT_TIMESTAMP.log"
+DAY_OF_WEEK=$(date +%u)  # 1 is Monday, 5 is Friday
+
+# Check if the script already ran today
+if [ -f "$LOG_FILE" ] && [ "$(cat $LOG_FILE | cut -d' ' -f1)" == "$CURRENT_DATE" ]; then
+    echo "Script already ran today ($CURRENT_DATE). Exiting."
+    exit 0
+fi
+
+# Function to run the Perl script and capture its PID
+run_perl_script() {
+    echo "Running Perl script..."
+    # Run the Perl script in the background and capture the PID
+    perl "$PERL_SCRIPT" &
+    PERL_PID=$!
+    # Log the execution date, PID, and timestamp to the log file
+    echo "$CURRENT_DATE PID: $PERL_PID Timestamp: $CURRENT_TIMESTAMP" > "$LOG_FILE"
+    echo "Perl script PID: $PERL_PID"
+}
+
+# Check if today is a weekday (Mon-Fri)
+if [ "$DAY_OF_WEEK" -ge 1 ] && [ "$DAY_OF_WEEK" -le 5 ]; then
+    # Get the list of files in /tmp
+    FILE_LIST=$(find "$TMP_DIR" -maxdepth 1 -type f)
+    FILE_COUNT=$(echo "$FILE_LIST" | wc -l)
+
+    if [ "$FILE_COUNT" -eq 3 ]; then
+        run_perl_script
+    else
+        # If file count is not 3, log the file list to the log file
+        echo "File count is not 3. Files in /tmp:" > "$LOG_FILE"
+        echo "$FILE_LIST" >> "$LOG_FILE"
+        echo "File count is $FILE_COUNT. The list of files has been saved to the log."
+    fi
+else
+    echo "Today is not a weekday. Perl script will not be run."
+fi
+
+# Start automatic daily execution (after initial run)
+while true; do
+    # Wait for 24 hours (86400 seconds)
+    sleep 86400  # Sleep for 24 hours
+
+    # Get the current date and time
+    CURRENT_DATE=$(date +%Y-%m-%d)
+    CURRENT_TIMESTAMP=$(date +%Y-%m-%d_%H-%M-%S)
+    LOG_FILE="$LOG_DIR/run_log_$CURRENT_TIMESTAMP.log"
+    DAY_OF_WEEK=$(date +%u)  # 1 is Monday, 5 is Friday
+
+    # Check if today is a weekday and if the script has already run today
+    if [ "$DAY_OF_WEEK" -ge 1 ] && [ "$DAY_OF_WEEK" -le 5 ]; then
+        # Get the list of files in /tmp
+        FILE_LIST=$(find "$TMP_DIR" -maxdepth 1 -type f)
+        FILE_COUNT=$(echo "$FILE_LIST" | wc -l)
+
+        if [ "$FILE_COUNT" -eq 3 ]; then
+            # Check if the script already ran today
+            if [ -f "$LOG_FILE" ] && [ "$(cat $LOG_FILE | cut -d' ' -f1)" == "$CURRENT_DATE" ]; then
+                echo "Script already ran today ($CURRENT_DATE). Skipping."
+            else
+                run_perl_script
+            fi
+        else
+            # If file count is not 3, log the file list to the log file
+            echo "File count is not 3. Files in /tmp:" > "$LOG_FILE"
+            echo "$FILE_LIST" >> "$LOG_FILE"
+            echo "File count is $FILE_COUNT. The list of files has been saved to the log."
+        fi
+    else
+        echo "Today is not a weekday. Perl script will not be run today."
+    fi
+
+    # Delete log files older than 15 days
+    find "$LOG_DIR" -name "run_log_*.log" -mtime +15 -exec rm -f {} \;
+    echo "Old log files (older than 15 days) have been deleted."
+done
