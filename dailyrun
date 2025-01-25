@@ -85,3 +85,43 @@ while true; do
     find "$LOG_DIR" -name "run_log_*.log" -mtime +15 -exec rm -f {} \;
     echo "Old log files (older than 15 days) have been deleted."
 done
+
+
+
+
+#!/bin/bash
+
+# Function to calculate the sleep time until 1 PM
+calculate_sleep_time() {
+  current_hour=$(date +%H)
+  current_minute=$(date +%M)
+
+  # Calculate the time until 1 PM in seconds
+  if [ "$current_hour" -lt 13 ]; then
+    # If it's before 1 PM, calculate the time until 1 PM today
+    target_seconds=$(( (13 - $current_hour) * 3600 + (60 - $current_minute) * 60 ))
+  else
+    # If it's after 1 PM, calculate the time until 1 PM tomorrow
+    target_seconds=$(( (24 - $current_hour + 13) * 3600 + (60 - $current_minute) * 60 ))
+  fi
+
+  echo $target_seconds
+}
+
+# Calculate the sleep time
+sleep_time=$(calculate_sleep_time)
+
+# Sleep until the next execution time
+sleep $sleep_time
+
+# Your script's main logic here
+echo "Running script at 1 PM..."
+# ... your script commands ... 
+
+# Loop to repeat daily
+while true; do
+  sleep_time=$(calculate_sleep_time)
+  sleep $sleep_time
+  echo "Running script at 1 PM..."
+  # ... your script commands ... 
+done
