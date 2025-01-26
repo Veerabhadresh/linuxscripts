@@ -157,3 +157,41 @@ force_application_cmd="db2 \"force application($agent_ids)\""
 echo "Executing force application command:"
 echo "$force_application_cmd"
 eval "$force_application_cmd"
+
+
+#!/bin/ksh
+
+# Function to execute DB2 query and get results
+db2_query() {
+  typeset query="$1"
+  typeset result=$(db2 -x "$query")
+  echo "$result"
+}
+
+# Execute the initial query
+long_running_sql=$(db2_query "select AGENT_ID from SYSIBMADM.LONGRUNNINGSQL where time > 60;")
+
+# Check if any results were found
+if [[ -z "$long_running_sql" ]]; then
+  echo "No long-running SQL found."
+  exit 0
+fi
+
+# Extract AGENT_ID values and join with comma
+agent_ids=""
+counter=0
+for agent_id in $(echo "$long_running_sql" | awk '{for(i=1;i<=NF;i++){print $i}}' | tail -n +2); do
+  if [[ $counter -gt 0 ]]; then 
+    agent_ids="$agent_ids,"
+  fi
+  agent_ids="$agent_ids$agent_id"
+  counter=$((counter+1))
+done
+
+# Construct the force application command
+force_application_cmd="db2 \"force application($agent_ids)\""
+
+# Execute the force application command
+echo "Executing force application command:"
+echo "$force_application_cmd"
+eval "$force_application_cmd"
