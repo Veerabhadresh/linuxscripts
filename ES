@@ -1,0 +1,54 @@
+{
+  "trigger": {
+    "schedule": {
+      "interval": "0 9 * * *" 
+    }
+  },
+  "input": {
+    "search": {
+      "request": {
+        "indices": "your_index_name", 
+        "body": {
+          "size": 0, 
+          "query": {
+            "range": {
+              "@timestamp": {
+                "gte": "now-1d", 
+                "lt": "now" 
+              }
+            }
+          },
+          "aggs": {
+            "doc_count": {
+              "value_count": {
+                "field": "txn_id" 
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "condition": {
+    "script": {
+      "lang": "painless",
+      "source": """
+        def yesterday_count = ctx.payload.aggregations.doc_count.value;
+        def today_count = doc['txn_id'].value; 
+        def difference = Math.abs(today_count - yesterday_count); 
+        def percentage_difference = (difference / yesterday_count) * 100; 
+        return percentage_difference > 50;
+      """
+    }
+  },
+  "actions": [
+    {
+      "email": {
+        "to": "your_email@example.com", 
+        "subject": "Daily Transaction Count Alert",
+        "body": "The transaction count has increased by more than 50% compared to yesterday.", 
+        "charset": "UTF-8" 
+      }
+    }
+  ]
+}
