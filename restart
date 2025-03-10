@@ -1,0 +1,33 @@
+#!/bin/bash
+
+PROCESS_NAME="xxx"
+RESTART_COMMAND="/path/to/your/xxx/command" # Replace with your actual command
+
+while true; do
+  # Find the PID of the process
+  PID=$(pgrep -f "$PROCESS_NAME")
+
+  if [ -n "$PID" ]; then
+    # Get GC status using jstat (if available)
+    GC_PERCENT=$(jstat -gcutil $PID | awk 'NR==2 {print $5}') # Assuming Old Gen % is in the 5th column
+
+    if [ -n "$GC_PERCENT" ]; then
+      # Check if GC percentage is greater than 90
+      if [ $(echo "$GC_PERCENT > 90" | bc) -eq 1 ]; then
+        echo "$(date) - GC percentage ($GC_PERCENT%) exceeded 90% for process $PROCESS_NAME (PID: $PID). Restarting..."
+        kill -9 $PID
+        sleep 2 # Give it a moment to die
+        $RESTART_COMMAND & # Restart in the background
+        echo "$(date) - Process $PROCESS_NAME restarted."
+      else
+        echo "$(date) - GC percentage ($GC_PERCENT%) is within acceptable limits for process $PROCESS_NAME (PID: $PID)."
+      fi
+    else
+      echo "$(date) - Could not retrieve GC status for process $PROCESS_NAME (PID: $PID). jstat may not be installed or process may not be a java application"
+    fi
+  else
+    echo "$(date) - Process $PROCESS_NAME not found."
+  fi
+
+  sleep 600 # Sleep for 10 minutes (600 seconds)
+done
