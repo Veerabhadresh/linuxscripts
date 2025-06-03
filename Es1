@@ -1,0 +1,51 @@
+GET my_transactions/_search
+{
+  "size": 0, // We only care about aggregations, not hits
+  "aggs": {
+    "txntype_counts": {
+      "terms": {
+        "field": "txntype.keyword", // Use .keyword for exact string matching
+        "size": 100 // Adjust as needed to get all transaction types
+      },
+      "aggs": {
+        "total_count": {
+          "value_count": {
+            "field": "_id" // Count all documents within this txntype bucket
+          }
+        },
+        "tmx_present_count": {
+          "filter": {
+            "term": {
+              "has_tmx": true // Assuming 'has_tmx' is a boolean field
+            }
+          },
+          "aggs": {
+            "count": {
+              "value_count": {
+                "field": "_id"
+              }
+            }
+          }
+        },
+        "tmx_missing_count": {
+          "filter": {
+            "bool": {
+              "must_not": {
+                "term": {
+                  "has_tmx": true
+                }
+              }
+            }
+          },
+          "aggs": {
+            "count": {
+              "value_count": {
+                "field": "_id"
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
