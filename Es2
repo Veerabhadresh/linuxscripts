@@ -1,0 +1,60 @@
+{
+  "took": ...,
+  "timed_out": false,
+  "_shards": ...,
+  "hits": {
+    "total": {
+      "value": ...,
+      "relation": "eq"
+    },
+    "max_score": null,
+    "hits": []
+  },
+  "aggregations": {
+    "txntype_counts": {
+      "doc_count_error_upper_bound": 0,
+      "sum_other_doc_count": 0,
+      "buckets": [
+        {
+          "key": "purchase", // txntype (1st column)
+          "doc_count": 1500, // Total count for 'purchase' (same as total_count below)
+          "total_count": {
+            "value": 1500 // 2nd column: Total count for this txntype
+          },
+          "tmx_present_count": {
+            "doc_count": 1200,
+            "count": {
+              "value": 1200 // 3rd column: Count of transactions with TMX for 'purchase'
+            }
+          },
+          "tmx_missing_count": {
+            "doc_count": 300,
+            "count": {
+              "value": 300 // 4th column: Count of transactions missing TMX for 'purchase'
+            }
+          }
+        },
+        {
+          "key": "refund",
+          "doc_count": 800,
+          "total_count": {
+            "value": 800
+          },
+          "tmx_present_count": {
+            "doc_count": 700,
+            "count": {
+              "value": 700
+            }
+          },
+          "tmx_missing_count": {
+            "doc_count": 100,
+            "count": {
+              "value": 100
+            }
+          }
+        }
+        // ... more buckets for other txntypes
+      ]
+    }
+  }
+}
